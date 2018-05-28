@@ -1,12 +1,13 @@
 ---
 galaxy_info:
   author: Dmitrii Ageev
+  description: "This role will install NGINX package, and run it as a service."
   license: GPLv2
   min_ansible_version: 2.3
   platforms:
     - name: Ubuntu
       versions:
-        - 16
+        - 16.04
     - name: CentOS
       versiona:
         - 7

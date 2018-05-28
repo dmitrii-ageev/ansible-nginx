@@ -1,0 +1,7 @@
+---
+- import_tasks: install.yml
+  when: nginx__state == "present"
+
+- import_tasks: uninstall.yml
+  when: nginx__state == "absent"
+...

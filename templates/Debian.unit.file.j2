@@ -1,0 +1,32 @@
+#
+# {{ ansible_managed | default('This file is managed by Ansible.') }}
+#
+# Check this guidance if you have any questions:
+# man systemd.unit
+#  -or-
+# https://www.freedesktop.org/software/systemd/man/systemd.unit.html
+#
+[Unit]
+Description={{ nginx__description }}
+After=syslog.target network.target auditd.service
+Before=
+
+[Service]
+{% if not nginx__daemon_run_as_root %}
+User={{ nginx__user }}
+Group={{ nginx__group }}
+{% endif %}
+{% if nginx__daemon_fork %}
+Type=forking
+{% endif %}
+PIDFile={{ nginx__pid_file }}
+EnvironmentFile=-{{ nginx__system_environment_file }}
+ExecStartPre=/bin/rm -f {{ nginx__pid_file }}
+ExecStart={{ nginx__daemon_file }} $OPTIONS
+ExecReload=/bin/kill -1 $PIDFile
+Restart=on-abort
+KillMode=process
+TimeoutSec=40
+
+[Install]
+WantedBy=multi-user.target

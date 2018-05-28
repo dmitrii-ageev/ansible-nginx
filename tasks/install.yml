@@ -1,0 +1,6 @@
+---
+- import_tasks: 10.init.yml
+- import_tasks: 20.install.yml
+- import_tasks: 30.configuration.yml
+- import_tasks: 40.run.yml
+...

@@ -1,0 +1,5 @@
+---
+- import_tasks: handlers_service.yml
+
+- import_tasks: handlers_systemd.yml
+...

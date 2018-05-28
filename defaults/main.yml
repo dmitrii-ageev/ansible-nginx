@@ -1,0 +1,195 @@
+---
+# Status of package ( present, absent )
+nginx__state:                "present"
+
+# Service, daemon, opt_ions and description
+nginx__service:              "nginx"
+# This variable might be changed within a task
+nginx__service_name:         "{{ nginx__service }}"
+nginx__daemon:               "{{ nginx__service }}"
+nginx__description:          "{{ nginx__service }} - High performance web server"
+
+# The -g option allows nginx to set time without restriction
+nginx__daemon_options:       "-c {{ nginx__conf_file }} -p {{ nginx__conf_dir }}"
+nginx__daemon_fork:          False
+nginx__daemon_run_as_root:   True
+
+# Service manager settings; possible options are: 'service' and 'systemd'
+service_manager:             "service"
+
+# User and group
+nginx__user:                 "{{ nginx__service }}"
+nginx__group:                "{{ nginx__user }}"
+
+# Does the group user have rights to control nginx
+nginx__group_has_sudo_rights: False
+
+# Modes
+nginx__dir_mode:             "0755"
+nginx__file_mode:            "0644"
+nginx__exec_mode:            "0755"
+
+# Directories
+nginx__root_dir:             ""
+nginx__home_dir:             "{{ nginx__root_dir }}/home"
+nginx__etc_dir:              "{{ nginx__root_dir }}/etc"
+nginx__bin_dir:              "{{ nginx__root_dir }}/bin"
+nginx__sbin_dir:             "{{ nginx__root_dir }}/sbin"
+nginx__lib_dir:              "{{ nginx__root_dir }}/lib"
+nginx__lib64_dir:            "{{ nginx__root_dir }}/lib64"
+nginx__opt_dir:              "{{ nginx__root_dir }}/opt"
+nginx__opt_conf_dir:         "{{ nginx__opt_dir }}/etc"
+nginx__opt_bin_dir:          "{{ nginx__opt_dir }}/bin"
+nginx__opt_sbin_dir:         "{{ nginx__opt_dir }}/sbin"
+nginx__opt_lib_dir:          "{{ nginx__opt_dir }}/lib"
+nginx__opt_lib64_dir:        "{{ nginx__opt_dir }}/lib64"
+nginx__usr_dir:              "{{ nginx__root_dir }}/usr"
+nginx__usr_bin_dir:          "{{ nginx__usr_dir }}/bin"
+nginx__usr_sbin_dir:         "{{ nginx__usr_dir }}/sbin"
+nginx__usr_lib_dir:          "{{ nginx__usr_dir }}/lib"
+nginx__usr_lib64_dir:        "{{ nginx__usr_dir }}/lib64"
+nginx__var_dir:              "{{ nginx__root_dir }}/var"
+nginx__var_run_dir:          "{{ nginx__var_dir }}/run"
+nginx__var_lib_dir:          "{{ nginx__var_dir }}/lib"
+nginx__var_log_dir:          "{{ nginx__var_dir }}/log"
+nginx__var_lock_dir:         "{{ nginx__var_dir }}/lock"
+nginx__var_cache_dir:        "{{ nginx__var_dir }}/cache"
+nginx__var_spool_dir:        "{{ nginx__var_dir }}/spool"
+nginx__var_tmp_dir:          "{{ nginx__var_dir }}/tmp"
+nginx__var_db_dir:           "{{ nginx__var_dir }}/db"
+
+nginx__conf_dir:             "{{ nginx__etc_dir }}/{{ nginx__service }}"
+nginx__vhost_dir:            "{{ nginx__etc_dir }}/{{ nginx__service }}/conf.d"
+nginx__user_home_dir:        "{{ nginx__home_dir }}/{{ nginx__user }}"
+nginx__run_dir:              "{{ nginx__var_run_dir if ansible_os_family == 'Debian' else '/run/'+nginx__service }}"
+nginx__log_dir:              "{{ nginx__var_log_dir }}/{{ nginx__service }}"
+nginx__lock_dir:             "{{ nginx__var_lock_dir }}"
+nginx__tmp_dir:              "{{ nginx__var_tmp_dir }}/{{ nginx__service }}"
+nginx__data_dir:             "{{ nginx__var_cache_dir }}/{{ nginx__service }}"
+nginx__keys_dir:             "{{ nginx__etc_dir }}/{{ nginx__service }}"
+
+nginx__directories:
+   - "{{ nginx__conf_dir }}"
+   - "{{ nginx__vhost_dir }}"
+   - "{{ nginx__data_dir }}"
+   - "{{ nginx__run_dir }}"
+
+# Files
+nginx__daemon_file:          "{{ nginx__usr_sbin_dir }}/{{ nginx__daemon }}"
+nginx__conf_file:            "{{ nginx__conf_dir }}/{{ nginx__service }}.conf"
+nginx__vhost_file:           "{{ nginx__vhost_dir }}/vhost.conf"
+nginx__sysconfig_file:       "{{ nginx__etc_dir }}/sysconfig/{{ nginx__service }}"
+nginx__vendor_service_file:  "{{ nginx__usr_lib_dir }}/systemd/system/{{ nginx__service }}.service"
+nginx__system_service_file:  "{{ nginx__etc_dir }}/systemd/system/{{ nginx__service }}.service"
+nginx__system_init_file:     "{{ nginx__etc_dir }}/init.d/{{ nginx__service }}"
+nginx__system_environment_file: "{{ nginx__etc_dir }}/{{ 'default' if ansible_os_family == 'Debian' else 'sysconfig' }}/{{ nginx__service }}"
+nginx__sudoers_file:         "{{ nginx__etc_dir }}/sudoers.d/{{ nginx__service }}"
+nginx__pid_file:             "{{ nginx__run_dir }}/{{ nginx__daemon }}.pid"
+nginx__log_file:             "{{ nginx__log_dir }}/{{ nginx__daemon }}.log"
+nginx__mime_file:            "{{ nginx__conf_dir }}/mime.types"
+
+nginx__error_log:            "{{ nginx__log_dir }}/error.log warn"
+nginx__access_log:           "{{ nginx__log_dir }}/access.log main buffer=16k"
+
+# IP addresses (could be a list)
+nginx__host_ipv4_address:    "{{ ansible_default_ipv4.address | default('127.0.0.1') }}"
+nginx__host_ipv6_address:    "{{ ansible_default_ipv6.address | default('::1') }}"
+
+nginx__ipv4_addresses:       "{{ nginx__host_ipv4_address }}"
+nginx__ipv6_addresses:       "{{ nginx__host_ipv6_address }}"
+
+# Required packages
+nginx__packages:
+   Ubuntu:
+      16:
+         packages:
+            - "{{ nginx__service }}"
+         repositories:
+            - "ppa:nginx/stable"
+      14:
+         packages:
+            - "{{ nginx__service }}"
+         repositories:
+            - "ppa:nginx/stable"
+      12:
+         packages:
+            - "{{ nginx__service }}"
+         repositories:
+            - "ppa:nginx/stable"
+   CentOS:
+      7:
+         packages:
+            - "{{ nginx__service }}"
+         repositories:
+            - "http://nginx.org/packages/centos/{{ ansible_distribution_major_version }}/$basearch/"
+         repokeys:
+            - "https://nginx.org/keys/nginx_signing.key"
+      6:
+         packages:
+            - "{{ nginx__service }}"
+         repositories:
+            - "http://nginx.org/packages/centos/{{ ansible_distribution_major_version }}/$basearch/"
+   Debian:
+      8:
+         packages:
+            - "{{ nginx__service }}"
+         repositories:
+            - "ppa:nginx/stable"
+
+
+# Default NGINX settings
+nginx__worker_processes: "1"
+nginx__worker_connections: "1024"
+nginx__multi_accept: "off"
+
+nginx__server_names_hash_bucket_size: "64"
+nginx__client_max_body_size: "64m"
+
+nginx__keepalive_timeout: "65"
+nginx__keepalive_requests: "100"
+
+nginx__sendfile: "on"
+nginx__tcp_nopush: "on"
+nginx__tcp_nodelay: "on"
+
+nginx__proxy_cache_path: ""
+
+nginx__extra_conf_options: ""
+# Example extra main options, used within the main nginx's context:
+#   nginx__extra_conf_options: |
+#     env VARIABLE;
+#     include /etc/nginx/main.d/*.conf;
+
+nginx__extra_http_options: ""
+# Example extra http options, printed inside the main server http config:
+#    nginx__extra_http_options: |
+#      proxy_buffering    off;
+#      proxy_set_header   X-Real-IP $remote_addr;
+#      proxy_set_header   X-Scheme $scheme;
+#      proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+#      proxy_set_header   Host $http_host;
+
+nginx__remove_default_vhost: false
+nginx__vhosts: []
+# Example vhost below, showing all available options:
+# - listen: "80 default_server" # default: "80 default_server"
+#   server_name: "example.com" # default: N/A
+#   root: "/var/www/example.com" # default: N/A
+#   index: "index.html index.htm" # default: "index.html index.htm"
+#
+#   # Properties that are only added if defined:
+#   error_page: ""
+#   access_log: ""
+#   error_log: ""
+#   extra_parameters: "" # Can be used to add extra config blocks (multiline).
+
+
+nginx__upstreams: []
+# - name: myapp1
+#   strategy: "ip_hash" # "least_conn", etc.
+#   servers: {
+#     "srv1.example.com",
+#     "srv2.example.com weight=3",
+#     "srv3.example.com"
+#   }
+...

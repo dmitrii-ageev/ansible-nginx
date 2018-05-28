@@ -1,0 +1,6 @@
+---
+- import_tasks: 60.stop.yml
+- import_tasks: 70.deconfiguration.yml
+- import_tasks: 80.uninstall.yml
+- import_tasks: 90.done.yml
+...

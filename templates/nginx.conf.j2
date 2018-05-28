@@ -1,0 +1,63 @@
+
+user  {{ nginx__user }};
+
+error_log  {{ nginx__error_log }};
+pid        {{ nginx__pid_file }};
+
+worker_processes  {{ nginx__worker_processes }};
+
+events {
+    worker_connections  {{ nginx__worker_connections }};
+    multi_accept {{ nginx__multi_accept }};
+}
+
+{% if nginx__extra_conf_options %}
+{{ nginx__extra_conf_options }}
+{% endif %}
+
+http {
+    include       {{ nginx__mime_file }};
+    default_type  application/octet-stream;
+
+    server_names_hash_bucket_size {{ nginx__server_names_hash_bucket_size }};
+
+    client_max_body_size {{ nginx__client_max_body_size }};
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  {{ nginx__access_log }};
+
+    sendfile        {{ nginx__sendfile }};
+    tcp_nopush      {{ nginx__tcp_nopush }};
+    tcp_nodelay     {{ nginx__tcp_nodelay }};
+
+    keepalive_timeout  {{ nginx__keepalive_timeout }};
+    keepalive_requests {{ nginx__keepalive_requests }};
+
+    #gzip  on;
+
+{% if nginx__proxy_cache_path %}
+    proxy_cache_path {{ nginx__proxy_cache_path }};
+{% endif %}
+
+{% if nginx__extra_http_options %}
+    {{ nginx__extra_http_options }}
+{% endif %}
+
+{% for upstream in nginx__upstreams %}
+    upstream {{ upstream.name }} {
+{% if upstream.strategy is defined %}
+        {{ upstream.strategy }};
+{% endif %}
+{% for server in upstream.servers %}
+        server {{ server }};
+{% endfor %}
+    }
+{% endfor %}
+
+{% if nginx__vhost_dir != nginx__vhost_dir %}
+    include {{ nginx__vhost_dir }}/*;
+{% endif %}
+}

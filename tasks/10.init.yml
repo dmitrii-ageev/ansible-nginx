@@ -1,0 +1,19 @@
+---
+- block:
+    - name: Create a group for the daemon
+      group:
+        name: "{{ nginx__group }}"
+      when:
+        - nginx__group != "root"
+        - nginx__group != "wheel"
+        - nginx__group != "sudo"
+
+    - name: Create a user for the daemon
+      user:
+        name: "{{ nginx__user }}"
+        group: "{{ nginx__group }}"
+        system: "yes"
+        createhome: "no"
+        comment: "{{ nginx__description }}"
+  when: nginx__user != "root"
+...

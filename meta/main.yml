@@ -1,0 +1,34 @@
+---
+galaxy_info:
+  author: Dmitrii Ageev
+  license: GPLv2
+  min_ansible_version: 2.3
+  platforms:
+    - name: Ubuntu
+      versions:
+        - 16
+    - name: CentOS
+      versiona:
+        - 7
+  categories:
+    - web
+dependencies:
+  # Preflight checks
+  - role: analysis
+    analysis__packages: "{{ nginx__packages }}"
+  # Logrotate settings
+  - role: dmitrii-ageev.logrotate
+    logrotate__files:
+      - name: "{{ nginx__service_name }}"
+        path:
+          - "{{ nginx__log_dir }}/*.log"
+        options:
+          - weekly
+          - rotate 4
+          - copytruncate
+          - compress
+          - delaycompress
+          - missingok
+          - notifempty
+        absent: "{{ True if nginx__state == 'absent' else False }}"
+...

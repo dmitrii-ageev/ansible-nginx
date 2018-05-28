@@ -1,0 +1,132 @@
+#!/bin/sh
+#
+# {{ nginx__service_name }} Starts/stop the "{{ nginx__daemon }}" daemon
+#
+# chkconfig:   345 95 5
+# description: {{ nginx__description }}
+#
+
+### BEGIN INIT INFO
+# Provides: {{ nginx__service_name }}
+# Required-Start: $network $remote_fs $syslog $named
+# Required-Stop: $syslog $remote_fs
+# Default-Start: 345
+# Default-Stop: 95
+# Short-Description: Starts/stop the "{{ nginx__daemon }}" daemon
+# Description: {{ nginx__description }}
+### END INIT INFO
+
+#
+# {{ ansible_managed | default('This file is managed by Ansible.') }}
+#
+# Author: Dmitrii Ageev <dmitrii.ageev@reannz.co.nz>
+
+. /etc/rc.d/init.d/functions
+
+# Get config.
+. /etc/sysconfig/network
+
+#
+# Check that networking is up.
+# Pretty much need it for the most daemons. 
+#
+if [ ${NETWORKING} = "no" ]
+then
+    exit 0
+fi
+#
+exec="{{ nginx__daemon_file }}"
+OPTS="{{ nginx__daemon_options }}"
+
+service="{{ nginx__service_name }}"
+config="{{ nginx__conf_file }}"
+lockfile="{{ nginx__lock_file }}"
+runas="{% if not nginx__daemon_run_as_root %}--user {{ nginx__user }}{% endif %}"
+
+start() {
+    [ -x $exec ] || exit 5
+    [ -f $config ] || exit 6
+    echo -n $"Starting $service: "
+    daemon --pid_file {{ nginx__pid_file }} $runas $exec $OPTS{% if not nginx__daemon_fork %}&{% endif %}
+
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && touch $lockfile
+}
+
+stop() {
+    echo -n $"Stopping $service: "
+    if [ -n "`pidofproc $exec`" ] ; then
+        killproc $exec
+		RETVAL=3
+    else
+        failure $"Stopping $service"
+    fi
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+}
+
+restart() {
+    stop
+    sleep 1
+    start
+}
+
+reload() {
+    echo -n $"Reloading $service: "
+    if [ -n "`pidofproc $exec`" ] ; then
+	killproc $exec -HUP
+		RETVAL=$?
+    else
+        failure $"Reloading $service"
+    fi
+    retval=$?
+    echo
+}
+
+force_reload() {
+    restart
+}
+
+rh_status() {
+    # run checks to determine if the service is running or use generic status
+    status $exec
+}
+
+rh_status_q() {
+    rh_status >/dev/null 2>&1
+}
+
+case "$1" in
+    start)
+        rh_status_q && exit 0
+        $1
+        ;;
+    stop)
+        rh_status_q || exit 0
+        $1
+        ;;
+    restart)
+        $1
+        ;;
+    reload)
+        rh_status_q || exit 7
+        $1
+        ;;
+    force-reload)
+        force_reload
+        ;;
+    status)
+        rh_status
+        ;;
+    condrestart|try-restart)
+        rh_status_q || exit 0
+        restart
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|try-restart|reload|force-reload}"
+        exit 2
+esac
+exit $?
+

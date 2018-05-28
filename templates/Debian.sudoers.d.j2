@@ -1,0 +1,12 @@
+#
+# {{ ansible_managed | default('This file is managed by Ansible.') }}
+#
+#
+# Allow group "{{ nginx__group }}" to control "{{ nginx__service_name }}" behavior.
+#
+%{{ nginx__group }} ALL=NOPASSWD:/usr/sbin/service {{ nginx__service_name }} start
+%{{ nginx__group }} ALL=NOPASSWD:/usr/sbin/service {{ nginx__service_name }} stop
+%{{ nginx__group }} ALL=NOPASSWD:/usr/sbin/service {{ nginx__service_name }} status
+%{{ nginx__group }} ALL=NOPASSWD:/usr/sbin/service {{ nginx__service_name }} restart
+%{{ nginx__group }} ALL=NOPASSWD:/usr/sbin/service {{ nginx__service_name }} reload
+%{{ nginx__group }} ALL=NOPASSWD:/usr/sbin/service {{ nginx__service_name }} force-reload

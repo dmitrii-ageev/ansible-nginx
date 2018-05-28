@@ -1,0 +1,43 @@
+---
+- name: Using SystemV manager to start service
+  service:
+    name: "{{ nginx__service_name }}"
+    state: started
+  register: nginx__service_started
+  listen: Start nginx service
+  when:
+    - service_manager == 'service'
+    - nginx__service_started is undefined or nginx__service_started.changed == False
+    - nginx__service_restarted is undefined or nginx__service_restarted.changed == False
+    - nginx__service_reloaded is undefined or nginx__service_reloaded.changed == False
+
+- name: Using SystemV manager to stop service
+  service:
+    name: "{{ nginx__service_name }}"
+    state: stopped
+  register: nginx__service_stopped
+  listen: Stop nginx service
+  when:
+    - service_manager == 'service'
+    - nginx__service_stopped is undefined or nginx__service_stopped.changed == False
+
+- name: Using SystemV manager to restart service
+  service:
+    name: "{{ nginx__service_name }}"
+    state: restarted
+  register: nginx__service_restarted
+  listen: Restart nginx service
+  when:
+    - service_manager == 'service'
+    - nginx__service_restarted is undefined or nginx__service_restarted.changed == False
+
+- name: Using SystemV manager to reload service
+  service:
+    name: "{{ nginx__service_name }}"
+    state: reloaded
+  when:
+    - service_manager == 'service'
+    - nginx__service_started is undefined or nginx__service_started.changed == False
+    - nginx__service_restarted is undefined or nginx__service_restarted.changed == False
+  listen: Reload nginx service
+...

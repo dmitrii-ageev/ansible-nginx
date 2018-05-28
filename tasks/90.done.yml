@@ -1,0 +1,18 @@
+---
+- block:
+    - name: Delete the daemon user
+      user:
+        name: "{{ nginx__user }}"
+        state: absent
+        remove: "yes"
+
+    - name: Delete the daemon group
+      group:
+        name: "{{ nginx__group }}"
+        state: absent
+      when:
+        - nginx__group != "root"
+        - nginx__group != "wheel"
+        - nginx__group != "sudo"
+  when: nginx__user != "root"
+...

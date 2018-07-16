@@ -1,0 +1,140 @@
+---
+  language: python
+  python: "2.7"
+
+  env:
+    - DISTRIBUTION=Ubuntu VERSION=xenial ANSIBLE_VERSION=2.4.0.0
+    - DISTRIBUTION=Ubuntu VERSION=xenial ANSIBLE_VERSION=latest
+    - DISTRIBUTION=CentOS VERSION=7      ANSIBLE_VERSION=2.4.0.0
+    - DISTRIBUTION=CentOS VERSION=7      ANSIBLE_VERSION=latest
+
+  before_install:
+    - ssh-keygen -f ~/.ssh/id_rsa -P ''
+    - sudo apt install software-properties-common -y
+    - sudo apt-add-repository ppa:ubuntu-lxc/lxd-stable -y
+    - sudo apt update -y
+    - sudo apt install lxd lxd-client -y
+    - sudo apt-get install --only-upgrade lxd lxd-client -y
+    - sudo lxd init --auto
+    - sudo gpasswd -a travis lxd
+    - sudo su travis -c 'lxc network create lxdbr0'
+    - sudo su travis -c 'lxc network attach-profile lxdbr0 default eth0'
+
+  install:
+    # Install ansible
+    - if [ "$ANSIBLE_VERSION" == "latest" ]; then pip install ansible; else pip install ansible==$ANSIBLE_VERSION; fi
+
+    # Check lxd and lxc version
+    - lxd --version
+    - lxc --version
+
+    # Check ansible version
+    - ansible --version
+
+    # Install ansible-lint
+    - pip install ansible-lint
+
+    # Install ansible-review
+    - pip install ansible-review
+
+    # Create ansible.cfg with correct roles_path
+    - echo '[defaults]'        > ansible.cfg
+    # Define path to roles
+    - echo 'roles_path = ../' >> ansible.cfg
+    # Disable host key checking
+    - echo 'host_key_checking = False' >> ansible.cfg
+    # Set ssh connectivity options
+    - echo '[ssh_connection]' >> ansible.cfg
+    - echo 'ssh_args = -o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=10m' >> ansible.cfg
+    - cat ansible.cfg
+
+  before_script:
+    # Create a LXD container
+    - >
+      if [ ! -z ${DISTRIBUTION} ]; then
+          export IMAGE=$(echo "${DISTRIBUTION}/${VERSION}" | tr '[:upper:]' '[:lower:]')
+          export CONTAINER_NAME=lxc${TRAVIS_BUILD_NUMBER}${TRAVIS_BUILD_ID}
+          sudo su travis -c "lxc launch images:${IMAGE} ${CONTAINER_NAME}"
+
+          # Wait for 10 seconds until DHCP assigns for IP address
+          sleep 10
+
+          # Display information about existing containers
+          sudo su travis -c "lxc list"
+
+          # Get the container IPv4 address
+          export CONTAINER_ADDRESS=$(sudo su travis -c "lxc list ${CONTAINER_NAME}" | grep ${CONTAINER_NAME} | cut -d "|" -f 4 |  cut -d " " -f2)
+
+          # Check if IPv4 address was founded
+          if [ -z ${CONTAINER_ADDRESS} ]; then
+            echo "Can't locate container's IP address"
+            exit -1
+          else
+            # Add the container's IP address to the inventory file
+            echo ${CONTAINER_ADDRESS} >> tests/inventory
+          fi
+
+          # Install openssh-server and python in the container
+          case ${DISTRIBUTION} in
+          'Ubuntu'|'Debian')
+              sudo su travis -c "lxc exec ${CONTAINER_NAME} -- apt install openssh-server python2.7 -y"
+              ;;
+          'CentOS'|'RedHat')
+              sudo su travis -c "lxc exec ${CONTAINER_NAME} -- yum install openssh-server python2.7 -y"
+              ;;
+          *)
+              echo 'Invalid distribution name: ${DISTRIBUTION}'
+              exit -1
+              ;;
+          esac
+
+          # Start OpenSSH
+          sudo su travis -c "lxc exec ${CONTAINER_NAME} -- systemctl start sshd"
+
+          # Make ssh keys directory inside the container
+          sudo su travis -c "lxc exec ${CONTAINER_NAME} -- mkdir -p -m 700 /root/.ssh"
+
+          # Copy ssh public key to the container
+          cat ~/.ssh/id_rsa.pub | sudo su travis -c "lxc exec ${CONTAINER_NAME} -- dd of=/root/.ssh/authorized_keys"
+
+          # Set correct permissions on the authorized_keys file
+          sudo su travis -c "lxc exec ${CONTAINER_NAME} -- chmod 600 /root/.ssh/authorized_keys"
+
+          # Create a symlink for python
+          sudo su travis -c "lxc exec ${CONTAINER_NAME} -- ln -fs /usr/bin/python2.7 /usr/bin/python"
+
+      else
+          # There is no IMAGE defined
+          echo 'ERROR: DISTRIBUTION variable is not defined!'
+          exit -1
+      fi
+
+  script:
+    # Display contents of the inventory file
+    - cat tests/inventory
+
+    # Download depended roles
+    - if [ -f tests/requirements.yml ]; then ansible-galaxy install -r tests/requirements.yml; fi
+
+    # Basic role syntax check
+    - ansible-lint tests/test.yml
+    - ansible-review tests/test.yml
+    - ansible-playbook -i tests/inventory --syntax-check tests/test.yml
+
+    # Run the role/playbook with ansible-playbook
+    - ansible-playbook -i tests/inventory --become --diff -vv -u root -l ${CONTAINER_ADDRESS} tests/test.yml
+
+    # Run the role/playbook again, checking to make sure it's idempotent
+    - >
+      ansible-playbook -i tests/inventory --become --diff -vv -u root -l ${CONTAINER_ADDRESS} tests/test.yml
+      | grep -q 'changed=0.*failed=0'
+      && (echo 'Idempotence test: pass' && exit 0)
+      || (echo 'Idempotence test: fail' && exit -1)
+
+  after_script:
+    # Delete the LXD container
+    - if [ ! -z ${IMAGE} ]; then sudo su travis -c "lxc delete --force ${CONTAINER_NAME}"; fi
+
+  notifications:
+    webhooks: https://galaxy.ansible.com/api/v1/notifications/
+...

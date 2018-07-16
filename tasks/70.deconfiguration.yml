@@ -1,35 +1,15 @@
 ---
-- block:
-    - name: Remove the sudoers file from sudo configuration
-      lineinfile:
-        dest: /etc/sudoers
-        regexp: "^#include /etc/sudoers.d/{{ nginx__service_name }}$"
-        line: "#include /etc/sudoers.d/{{ nginx__service_name }}"
-        state: absent
-
-    - name: Delete a sudoers file
-      file:
-        path: "{{ nginx__sudoers_file }}"
-        state: absent
-  when:
-    - nginx__group_has_sudo_rights
-    - nginx__group != "root"
-    - nginx__group != "wheel"
-    - nginx__group != "sudo"
-
-- name: Remove managed vhost config file
+- name: Delete vhost config files
   file:
-    dest: "{{ nginx__vhost_file }}"
+    dest: "{{ nginx__vhost_dir + '/' + item['name'] }}"
     state: absent
   when:
-    - nginx__vhost_file is defined
-    - nginx__vhost_file != ''
+    - nginx__vhosts is defined
+    - item['name'] is defined
 
-- name: Delete the configuration file
+- name: Delete the main configuration file
   file:
     path: "{{ nginx__conf_file }}"
     state: absent
-  when:
-    - nginx__conf_file is defined
-    - nginx__conf_file != ''
+  when: nginx__conf_file is defined
 ...

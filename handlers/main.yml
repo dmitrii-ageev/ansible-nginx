@@ -1,5 +1,33 @@
 ---
-- import_tasks: handlers_service.yml
+- name: Start nginx service
+  systemd:
+    name: "{{ nginx__service }}"
+    state: started
+  register: nginx__service_started
+  when:
+    - nginx__service_started is undefined or nginx__service_started.changed == False
+    - nginx__service_restarted is undefined or nginx__service_restarted.changed == False
+    - nginx__service_reloaded is undefined or nginx__service_reloaded.changed == False
 
-- import_tasks: handlers_systemd.yml
+- name: Stop nginx service
+  systemd:
+    name: "{{ nginx__service }}"
+    state: stopped
+  register: nginx__service_stopped
+  when: nginx__service_stopped is undefined or nginx__service_stopped.changed == False
+
+- name: Restart nginx service
+  systemd:
+    name: "{{ nginx__service }}"
+    state: restarted
+  register: nginx__service_restarted
+  when: nginx__service_restarted is undefined or nginx__service_restarted.changed == False
+
+- name: Reload nginx service
+  systemd:
+    name: "{{ nginx__service }}"
+    state: reloaded
+  when:
+    - nginx__service_started is undefined or nginx__service_started.changed == False
+    - nginx__service_restarted is undefined or nginx__service_restarted.changed == False
 ...

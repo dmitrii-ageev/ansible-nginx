@@ -1,103 +1,132 @@
 ---
 - block:
-     - name: Add required repositories for Debian-based systems
-       apt_repository:
-          repo: "{{ item }}"
-          state: present
-          update_cache: yes
-       when:
-          - item is defined
-          - item != ''
-       with_items: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repositories'] }}"
+    - block:
+        - name: Add key using its data
+          apt_key:
+            data: "{{ item.data | default(None) }}"
+            state: "{{ item.state | default('present') }}"
+          when: item.data is defined
+          loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repokeys'] }}"
 
-     - name: Install package dependencies using apt
-       apt:
-          name: "{{ item }}"
-          state: present
-          update_cache: yes
-          allow_unauthenticated: yes
-          force: yes
-       when:
-          - item is defined
-          - item != ''
-       with_items: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['dependencies'] }}"
-       notify: Restart nginx service
+        - name: Download key from URL
+          apt_key:
+            id: "{{ item.id | default(None) }}"
+            url: "{{ item.url | default(None) }}"
+            keyring: "{{ item.keyring | default(None) }}"
+            state: "{{ item.state | default('present') }}"
+          when: item.url is defined
+          loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repokeys'] }}"
 
-     - name: Install main package using apt
-       apt:
-          name: "{{ item }}"
-          state: present
-          update_cache: yes
-          allow_unauthenticated: yes
-          force: yes
-       when:
-          - item is defined
-          - item != ''
-       with_items: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['packages'] }}"
-       notify: Restart nginx service
+        - name: Import key from a keyserver
+          apt_key:
+            id: "{{ item.id | default(None) }}"
+            keyserver: "{{ item.keyserver | default(None) }}"
+            state: "{{ item.state | default('present') }}"
+          when: item.keyserver is defined
+          loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repokeys'] }}"
+
+      when: nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repokeys'] is defined
+
+    - name: Add required repositories for Debian-based systems
+      apt_repository:
+        repo: "{{ item }}"
+        state: present
+        update_cache: yes
+        # Add root CA update task to enable the option below
+        validate_certs: no
+      when:
+        - item is defined
+        - item != ''
+      loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repositories'] }}"
+
+    - name: Install package dependencies using apt
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+        allow_unauthenticated: yes
+        force: yes
+      when:
+        - item is defined
+        - item != ''
+      loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['dependencies'] }}"
+      notify: Restart nginx service
+
+    - name: Install main package using apt
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+        allow_unauthenticated: yes
+        force: yes
+      when:
+        - item is defined
+        - item != ''
+      loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['packages'] }}"
+      notify: Restart nginx service
   when: ansible_os_family == "Debian"
 
 - block:
-     - name: Add required repositories for RedHat-based systems
-       yum_repository:
-          name: "{{ item.0 | b64encode }}"
-          baseurl: "{{ item.0 }}"
-          state: present
-          description: "A repository for {{ nginx__service_name }} service."
-          gpgkey: "{{ item.1|default('') }}"
-       when:
-          - item.0 is defined
-          - item.0 != ''
-          - "not 'rpm' in item.0.lower()"
-       with_together:
-          - "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repositories'] }}"
-          - "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repokeys'] }}"
+    - name: Add required repositories for RedHat-based systems
+      yum_repository:
+        name: "{{ item.0 | b64encode }}"
+        baseurl: "{{ item.0 }}"
+        state: present
+        description: "A repository for {{ nginx__service }} service."
+        gpgkey: "{{ item.1|default('') }}"
+      when:
+        - item.0 is defined
+        - item.0 != ''
+        - "not 'rpm' in item.0.lower()"
+      with_together:
+        - "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repositories'] }}"
+        - "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repokeys'] }}"
 
 
-     - name: Add required repositories for RedHat-based systems as RPM package
-       yum:
-          name: "{{ item }}"
-          state: present
-          update_cache: yes
-       when:
-          - item is defined
-          - item != ''
-          - "'rpm' in item|lower"
-       with_items: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repositories'] }}"
+    - name: Add required repositories for RedHat-based systems as RPM package
+      yum:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      when:
+        - item is defined
+        - item != ''
+        - "'rpm' in item|lower"
+      loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['repositories'] }}"
 
-     - name: Install package dependencies using yum
-       yum:
-          name: "{{ item }}"
-          state: present
-          update_cache: yes
-       when:
-          - item is defined
-          - item != ''
-       with_items: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['dependencies'] }}"
-       notify: Restart nginx service
+    - name: Install package dependencies using yum
+      yum:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      when:
+        - item is defined
+        - item != ''
+      loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['dependencies'] }}"
+      notify: Restart nginx service
 
-     - name: Install main package using yum
-       yum:
-          name: "{{ item }}"
-          state: present
-          update_cache: yes
-       when:
-          - item is defined
-          - item != ''
-       with_items: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['packages'] }}"
-       notify: Restart nginx service
+    - name: Install main package using yum
+      yum:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      when:
+        - item is defined
+        - item != ''
+      loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['packages'] }}"
+      notify: Restart nginx service
   when: ansible_os_family == "RedHat"
 
 - name: Create the application folder set
   file:
-     path: "{{ item }}"
-     state: directory
-     owner: "{{ nginx__user }}"
-     group: "{{ nginx__group }}"
-     mode: "{{ nginx__dir_mode }}"
-  with_items: "{{ nginx__directories }}"
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ nginx__user }}"
+    group: "{{ nginx__group }}"
+    mode: "{{ nginx__dir_mode }}"
+  loop: "{{ nginx__directories }}"
   when:
-     - nginx__directories is defined
-     - nginx__directories != ''
+    - nginx__directories is defined
+    - nginx__directories != ''
   notify: Restart nginx service
 ...

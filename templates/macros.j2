@@ -1,0 +1,85 @@
+{# macros.j2                     #}
+{#                               #}
+{# ~*~ Print Formatted macro ~*~ #}
+{#                               #}
+{% macro print_formatted(str) %}
+{{   '%-40s' | format(str) -}}
+{% endmacro %}
+{#                           #}
+{# ~*~ Indentation macro ~*~ #}
+{#                           #}
+{% macro indentation(number) %}
+{{   ' ' | indent(number, true) if number > 0 else '' -}}
+{% endmacro %}
+{#                                #}
+{# ~*~ Print Raw String macro ~*~ #}
+{#                                #}
+{% macro print_raw_string(str, indent=0, block_ident=0) %}
+{%   for line in str.split('\n') %}
+{%     if not '%raw%' in line %}
+{%       if loop.first %}
+{{         indentation(indent) + line -}}
+{%       elif not loop.last or line %}
+{{         '\n' + indentation(indent) + indentation(block_ident) + line -}}
+{%       endif %}
+{%     endif %}
+{%   endfor %}
+{% endmacro %}
+{#                            #}
+{# ~*~ Print String macro ~*~ #}
+{#                            #}
+{% macro print_string(str, indent=0, block_ident=0) %}
+{%   if '\n' in str %}
+{%     for line in str.split('\n') %}
+{%       if loop.first %}
+{{         indentation(indent) + line -}}
+{%       elif not loop.last or line %}
+{{         '\n' + indentation(indent) + indentation(block_ident) + line -}}
+{%       endif %}
+{%     endfor %}
+{%   else %}
+{{     indentation(indent) + str -}}
+{%   endif %}
+{% endmacro %}
+{#                             #}
+{# ~*~ Print Boolean macro ~*~ #}
+{#                             #}
+{% macro print_boolean(bool, indent=0) %}
+{{   print_string('on', indent) if bool == True else print_string('off', indent) -}}
+{% endmacro %}
+{#                            #}
+{# ~*~ Print Config macro ~*~ #}
+{#                            #}
+{% macro print_config(element, indent=0) %}
+{%   if element is string %}
+{{     print_string(element, indent) }}{{ '' if '\n' in element else ';' }}
+{%   elif element is mapping %}
+{%     for key,value in element|dictsort(False, 'key') %}
+{%       if value is defined and value != '' %}
+{%         if value is string %}
+{%           if '%raw%' in value %}
+{{             indentation(indent) }}{{ print_raw_string(value) }}
+{%           else %}
+{{             indentation(indent) }}{{ print_formatted(key) }} {{ print_string(value, 0, 49) -}};
+{%           endif %}
+{%         elif value|string == 'True' or value|string == 'False' %}
+{{           indentation(indent) }}{{ print_formatted(key) }} {{ print_boolean(value) -}};
+{%         elif value is number %}
+{{           indentation(indent) }}{{ print_formatted(key) }} {{ value -}};
+{%         elif value is iterable or value is mapping %}
+{{           indentation(indent) }}{{ key }} {
+{{                                              print_config(value,indent + 8) -}}
+{{                     indentation(indent) }}}
+{%         endif %}
+{%       else %}
+{{         indentation(indent) }}{{ key }}
+{%       endif %}
+{%     endfor %}
+{%   elif element is iterable %}
+{%     for item in element %}
+{{       print_config(item, indent) -}}
+{%     endfor %}
+{%   else %}
+{{     element }}
+{%   endif %}
+{% endmacro %}

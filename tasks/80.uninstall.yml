@@ -3,14 +3,12 @@
   file:
      path: "{{ item }}"
      state: absent
-  when:
-     - item is defined
-     - item != ''
-  with_items: "{{ nginx__directories }}"
+  when: item is defined
+  loop: "{{ nginx__directories }}"
 
-- name: Deinstall main package
+- name: Uninstall main package(s)
   package:
      name: "{{ item }}"
      state: absent
-  with_items: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['packages'] }}"
+  loop: "{{ nginx__packages[ansible_distribution][ansible_distribution_major_version|int]['packages'] }}"
 ...

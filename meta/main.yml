@@ -1,7 +1,6 @@
 ---
 galaxy_info:
-  author: Dmitrii Ageev
-  description: "This role will install NGINX package, and run it as a service."
+  author: "Dmitrii Ageev"
   license: GPLv2
   min_ansible_version: 2.3
   platforms:
@@ -9,27 +8,7 @@ galaxy_info:
       versions:
         - 16.04
     - name: CentOS
-      versiona:
+      versions:
         - 7
   categories:
     - web
-dependencies:
-  # Preflight checks
-  - role: analysis
-    analysis__packages: "{{ nginx__packages }}"
-  # Logrotate settings
-  - role: dmitrii-ageev.logrotate
-    logrotate__files:
-      - name: "{{ nginx__service_name }}"
-        path:
-          - "{{ nginx__log_dir }}/*.log"
-        options:
-          - weekly
-          - rotate 4
-          - copytruncate
-          - compress
-          - delaycompress
-          - missingok
-          - notifempty
-        absent: "{{ True if nginx__state == 'absent' else False }}"
-...

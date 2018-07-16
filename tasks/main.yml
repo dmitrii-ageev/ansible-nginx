@@ -1,7 +1,17 @@
 ---
-- import_tasks: install.yml
+- include_tasks: preflight_checks.yml
+
+- block:
+    - include_tasks: 10.init.yml
+    - include_tasks: 20.install.yml
+    - include_tasks: 30.configuration.yml
+    - include_tasks: 40.start.yml
   when: nginx__state == "present"
 
-- import_tasks: uninstall.yml
+- block:
+    - include_tasks: 60.stop.yml
+    - include_tasks: 70.deconfiguration.yml
+    - include_tasks: 80.uninstall.yml
+    - include_tasks: 90.done.yml
   when: nginx__state == "absent"
 ...

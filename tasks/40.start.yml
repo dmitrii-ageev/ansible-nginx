@@ -1,0 +1,18 @@
+---
+- name: Create the system environment file
+  template:
+    src: "environment.file.j2"
+    dest: "{{ nginx__system_environment_file }}"
+    mode: "{{ nginx__file_mode }}"
+  notify: Reload nginx service
+
+- name: Enable service
+  systemd:
+    name: "{{ nginx__service }}"
+    enabled: True
+
+- name: Start service
+  systemd:
+    name: "{{ nginx__service }}"
+    state: started
+...

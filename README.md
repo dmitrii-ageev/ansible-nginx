@@ -1,22 +1,17 @@
 nginx
-===
+=====
 
-This role will install NGINX package, and run it as a service.
+This role handles the installation and configuration of an NGINX instance.
 
 Requirements
 ------------
 
-So far it was tested under Ubuntu 14 and Ubuntu 16. 
+So far it was tested with Ubuntu 16. 
 
 Role Variables
 --------------
 
- You can change NGINX options with "nginx__daemon_options" variable. DO NOT change it in the defaults/main.yml, use vars/main.yml instead. 
-
-Dependencies
-------------
-
- No.
+ You can change NGINX options with "nginx__options" variable. DO NOT change it in the defaults/main.yml, use group_vars/host_vars instead. 
 
 Example Playbook
 ----------------
@@ -25,25 +20,15 @@ Here is an example of how to use this role (for instance, with variables passed 
 
     - hosts: servers
       roles:
-         - { role: nginx, nginx__daemon_options="-g" }
+         - { role: nginx, nginx__options="-g" }
 
 License
 -------
 
-Apache v2.0
+GPLv2
 
 Author Information
 ------------------
 
-Dmitrii Ageev <dmitrii.ageev@reannz.co.nz>
-
-
-TODO
-----
-
-
-HISTORY
--------
-
-+ Add CentOS 6.x and Ubuntu 12 support
+Dmitrii Ageev <d.ageev@gmail.com>
 

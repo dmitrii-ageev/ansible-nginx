@@ -1,50 +1,51 @@
 ---
+# TODO: replace with openssl_dhparam module
+openssl_publickey                                    Generate an OpenSSL public key from its private key.    
+- name: Check dhparams
+  shell: "openssl dhparam -text -in /etc/ssl/private/dhparams.pem | grep '{{ nginx__dhparams_bits }} bit'"
+  ignore_errors: true
+  changed_when: false
+  register: nginx__dhparam
+
+# TODO: replace with openssl_dhparam module
+- name: Create strong dhparams
+  command: "openssl dhparam -out /etc/ssl/private/dhparams.pem {{ nginx__dhparams_bits }}"
+  when:
+    - nginx__dhparam.rc is defined
+    - nginx__dhparam.rc == 1
+
 - name: Create the configuration file
   template:
     src: nginx.conf.j2
     dest: "{{ nginx__conf_file }}"
-    owner: "{{ nginx__user }}"
-    group: "{{ nginx__group }}"
     mode: "{{ nginx__file_mode }}"
-  when:
-    - nginx__conf_file is defined
-    - nginx__conf_file != ''
+    owner: root
+    group: root
+  when: nginx__conf_file is defined
   notify: Reload nginx service
 
-- name: Remove managed vhost config file (if no vhosts are configured)
+- name: Remove managed vhost config file
   file:
-    dest: "{{ nginx__vhost_file }}"
+    dest: "{{ nginx__vhost_dir + '/' + item['name'] }}"
     state: absent
-  when: nginx__vhost_file is not defined or nginx__vhost_file != ''
+  when:
+    - nginx__vhosts is defined
+    - item['state'] is defined
+    - item['state']|lower == 'absent'
+  loop: "{{ nginx__vhosts }}"
   notify: Reload nginx service
 
-- name: Add managed vhost config file (if any vhosts are configured)
+- name: Add managed vhost config file
   template:
     src: vhost.conf.j2
-    dest: "{{ nginx__vhost_file }}"
-    owner: "{{ nginx__user }}"
-    group: "{{ nginx__group }}"
+    dest: "{{ nginx__vhost_dir + '/' + item['name'] }}"
     mode: "{{ nginx__file_mode }}"
+    owner: root
+    group: root
   when:
-    - nginx__vhost_file is defined
-    - nginx__vhost_file != ''
+    - nginx__vhosts is defined
+    - item['state'] is not defined or
+      item['state']|lower == 'present'
+  loop: "{{ nginx__vhosts }}"
   notify: Reload nginx service
-
-- block:
-    - name: Create a sudoers file
-      template:
-        src: "{{ ansible_os_family }}.sudoers.d.j2"
-        dest: "{{ nginx__sudoers_file }}"
-        mode: "{{ nginx__file_mode }}"
-
-    - name: Add the sudoers file to the sudo configuration
-      lineinfile:
-        dest: /etc/sudoers
-        regexp: "^#include /etc/sudoers.d/{{ nginx__service_name }}$"
-        line: "#include /etc/sudoers.d/{{ nginx__service_name }}"
-  when:
-    - nginx__group_has_sudo_rights
-    - nginx__group != "root"
-    - nginx__group != "wheel"
-    - nginx__group != "sudo"
 ...
